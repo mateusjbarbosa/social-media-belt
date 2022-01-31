@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     ports:
-      - 3005:3000
+      - 3000:3000
     volumes:
       - .:/home/devpleno_d30
     command: tail -F anything
