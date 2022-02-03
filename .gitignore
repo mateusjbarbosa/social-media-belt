@@ -38,3 +38,7 @@ yarn-error.log*
 
 Dockerfile.dev
 docker-compose.dev.yaml
+
+.env
+
+/tmp
