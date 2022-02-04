@@ -6,8 +6,12 @@ import LayoutPublic from 'components/Layouts/LayoutPublic'
 import LayoutTenant from 'components/Layouts/LayoutTenant'
 
 import '../styles/globals.css'
+import { SessionProvider } from 'next-auth/react'
 
-function MyApp({ Component, pageProps }: AppProps) {
+function MyApp({
+  Component,
+  pageProps: { session, ...pageProps }
+}: AppProps) {
   const router = useRouter()
   const { pathname } = router
 
@@ -26,9 +30,11 @@ function MyApp({ Component, pageProps }: AppProps) {
   }
 
   return (
-    <Layout>
-      <Component {...pageProps} />
-    </Layout>
+    <SessionProvider session={session}>
+      <Layout>
+        <Component {...pageProps} />
+      </Layout>
+    </SessionProvider>
   )
 }
 
