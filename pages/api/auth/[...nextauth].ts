@@ -18,7 +18,13 @@ export default NextAuth({
   session: { strategy: 'jwt' },
   jwt: { secret: process.env.JWT_SECRET },
   pages: {},
-  callbacks: {},
+  callbacks: {
+    async jwt({ token, user, isNewUser }) {
+      console.log(user, isNewUser)
+
+      return token
+    }
+  },
   events: {},
   debug: false,
 })
