@@ -60,7 +60,7 @@ model VerificationToken {
 }
 
 model Tenant {
-  id        Int      @id @default(autoincrement())
+  id        String   @id @default(cuid())
   name      String
   slug      String
   plan      String
