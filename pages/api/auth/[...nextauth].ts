@@ -19,8 +19,44 @@ export default NextAuth({
   jwt: { secret: process.env.JWT_SECRET },
   pages: {},
   callbacks: {
+    async session({ session, token }) {
+      // @ts-ignore
+      session.user.id = token.sub
+
+      return session
+    },
     async jwt({ token, user, isNewUser }) {
-      console.log(user, isNewUser)
+      if (isNewUser) {
+        const accounts = await prisma.tenant.findFirst({
+          where: {
+            users: {
+              some: {
+                userId: user?.id
+              }
+            }
+          }
+        })
+
+        if (!accounts) {
+          const tenant = await prisma.tenant.create({
+            data: {
+              name: 'First Tenant',
+              image: '',
+              slug: 'first_tenant',
+              plan: 'free'
+            }
+          })
+
+          await prisma.userOnTenants.create({
+            data: {
+              // @ts-ignore
+              userId: user.id,
+              tenantId: tenant.id,
+              role: 'owner'
+            }
+          })
+        }
+      }
 
       return token
     }
