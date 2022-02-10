@@ -22,7 +22,6 @@ model User {
 
 model Account {
   id                 String  @id @default(cuid())
-  userId             String  @map("user_id")
   type               String
   provider           String
   providerAccountId  String  @map("provider_account_id")
@@ -35,6 +34,7 @@ model Account {
   session_state      String?
   oauth_token_secret String?
   oauth_token        String?
+  userId             String  @map("user_id")
   user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
@@ -44,8 +44,8 @@ model Account {
 model Session {
   id           String   @id @default(cuid())
   sessionToken String   @unique @map("session_token")
-  userId       String   @map("user_id")
   expires      DateTime
+  userId       String   @map("user_id")
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
@@ -68,6 +68,7 @@ model Tenant {
   image     String?
   createdAt DateTime        @default(now()) @map("created_at") @db.Timestamp(6)
   users     UserOnTenants[]
+  links     Link[]
 
   @@map("tenants")
 }
@@ -75,11 +76,24 @@ model Tenant {
 model UserOnTenants {
   userId     String   @map("user_id")
   tenantId   String   @map("tenant_id")
-  user       User     @relation(fields: [userId], references: [id])
-  tenant     Tenant   @relation(fields: [tenantId], references: [id])
-  assignedAt DateTime @default(now()) @map("assigned_at")
   role       String
+  assignedAt DateTime @default(now()) @map("assigned_at")
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
 
   @@id([userId, tenantId])
   @@map("user_on_tenants")
+}
+
+model Link {
+  id          String   @id @default(cuid())
+  name        String
+  publicName  String   @map("public_name")
+  slug        String
+  destination String
+  tenantId    String   @map("tenant_id")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@map("links")
 }
