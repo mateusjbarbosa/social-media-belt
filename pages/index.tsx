@@ -23,7 +23,7 @@ const Home: NextPage = () => {
           <button onClick={() => signOut()}>Sign out</button>
           <br />
         </>
-        : <button onClick={() => signIn()}>Sign in</button>
+        : <button onClick={() => signIn(null, { callbackUrl: '/app' })}>Sign in</button>
       }
     </>
   )
