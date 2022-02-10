@@ -2,6 +2,7 @@ import type { AppProps } from 'next/app'
 import { useRouter } from 'next/router'
 
 import LayoutApp from 'components/Layouts/LayoutApp'
+import LayoutEmpty from 'components/Layouts/LayoutEmpty'
 import LayoutPublic from 'components/Layouts/LayoutPublic'
 import LayoutTenant from 'components/Layouts/LayoutTenant'
 
@@ -25,6 +26,8 @@ function MyApp({
     Layout = LayoutApp
   } else if (verifyPathname('/[slug]')) {
     Layout = LayoutTenant
+  } else if (pathname === '/app') {
+    Layout = LayoutEmpty
   } else {
     Layout = LayoutPublic
   }
