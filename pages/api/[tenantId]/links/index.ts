@@ -14,6 +14,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (req.method === 'POST') {
       const data = { ...req.body, tenantId }
 
+      const tenants = await prisma.tenant.findMany({
+        where: {
+          users: {
+            some: {
+              // @ts-ignore
+              userId: session.user.id
+            }
+          }
+        }
+      })
+
       const savedLink = await prisma.link.create({ data })
 
       res.send(savedLink)
