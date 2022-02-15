@@ -1,3 +1,4 @@
+import NextLink from "next/link"
 import { useRouter } from "next/router"
 
 import { SubmitHandler, useForm } from "react-hook-form"
@@ -9,6 +10,8 @@ import { Link } from '@prisma/client'
 
 import { useGet } from "hooks/api"
 import { fetchPost, fetchDelete } from "lib/fetch"
+
+import { PaginationWrapper } from '../../api/[tenantId]/links'
 
 import AlertComponent from "components/Alert"
 import Subtitle from "components/Headings/Subtitle"
@@ -32,21 +35,23 @@ const newLinkSchema = yup.object({
 
 const Links = () => {
   const router = useRouter()
+  const tenantId = router?.query?.tenantId
+  const cursor = router?.query?.cursor ? `?cursor=${router?.query?.cursor}` : ''
 
-  const { data, mutate } = useGet<Link[]>(`/api/${router?.query?.tenantId}/links`)
+  const { data, mutate } = useGet<PaginationWrapper<Link>>(tenantId && `/api/${router?.query?.tenantId}/links${cursor}`)
 
   const { handleSubmit, register, formState: { errors } } = useForm<NewLinkForm>({
     resolver: yupResolver(newLinkSchema)
   })
 
   const submitLink: SubmitHandler<NewLinkForm> = async (inputs: NewLinkForm) => {
-    await fetchPost({ url: `api/${router?.query?.tenantId}/links`, data: inputs })
+    await fetchPost({ url: `api/${tenantId}/links`, data: inputs })
 
     await mutate()
   }
 
   const deleteLink = async (id: string) => {
-    await fetchDelete({ url: `api/${router?.query?.tenantId}/links/${id}` })
+    await fetchDelete({ url: `api/${tenantId}/links/${id}` })
 
     await mutate()
   }
@@ -175,7 +180,7 @@ const Links = () => {
         </div>
       </form>
 
-      {data && data.length === 0 ?
+      {data && data?.items?.length === 0 ?
         <AlertComponent showIcon={false}>Nenhum link cadastrado</AlertComponent> :
         (
           <div className="container mx-auto px-4 sm:px-8 max-w-3xl">
@@ -217,7 +222,7 @@ const Links = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {data && data.map((link: Link) => (
+                      {data && data?.items?.map((link: Link) => (
                         <tr key={link.id}>
                           <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
                             <div className="flex items-center">
@@ -259,30 +264,23 @@ const Links = () => {
                   </table>
                   <div className="px-5 bg-white py-5 flex flex-col xs:flex-row items-center xs:justify-between">
                     <div className="flex items-center">
-                      <button type="button" className="w-full p-4 border text-base rounded-l-xl text-gray-600 bg-white hover:bg-gray-100">
-                        <svg width={9} fill="currentColor" height={8} className viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M1427 301l-531 531 531 531q19 19 19 45t-19 45l-166 166q-19 19-45 19t-45-19l-742-742q-19-19-19-45t19-45l742-742q19-19 45-19t45 19l166 166q19 19 19 45t-19 45z">
-                          </path>
-                        </svg>
-                      </button>
-                      <button type="button" className="w-full px-4 py-2 border-t border-b text-base text-indigo-500 bg-white hover:bg-gray-100 ">
-                        1
-                      </button>
-                      <button type="button" className="w-full px-4 py-2 border text-base text-gray-600 bg-white hover:bg-gray-100">
-                        2
-                      </button>
-                      <button type="button" className="w-full px-4 py-2 border-t border-b text-base text-gray-600 bg-white hover:bg-gray-100">
-                        3
-                      </button>
-                      <button type="button" className="w-full px-4 py-2 border text-base text-gray-600 bg-white hover:bg-gray-100">
-                        4
-                      </button>
-                      <button type="button" className="w-full p-4 border-t border-b border-r text-base  rounded-r-xl text-gray-600 bg-white hover:bg-gray-100">
-                        <svg width={9} fill="currentColor" height={8} className viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M1363 877l-742 742q-19 19-45 19t-45-19l-166-166q-19-19-19-45t19-45l531-531-531-531q-19-19-19-45t19-45l166-166q19-19 45-19t45 19l742 742q19 19 19 45t-19 45z">
-                          </path>
-                        </svg>
-                      </button>
+                      <NextLink href={`/app/${tenantId}/links?cursor=${data?.items[data?.items?.length - 1].id}`}>
+                        <button type="button" className="w-full p-4 border text-base rounded-l-xl text-gray-600 bg-white hover:bg-gray-100">
+                          <svg width={9} fill="currentColor" height={8} viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M1427 301l-531 531 531 531q19 19 19 45t-19 45l-166 166q-19 19-45 19t-45-19l-742-742q-19-19-19-45t19-45l742-742q19-19 45-19t45 19l166 166q19 19 19 45t-19 45z">
+                            </path>
+                          </svg>
+                        </button>
+                      </NextLink>
+
+                      <NextLink href={`/app/${tenantId}/links?cursor=${data?.items[data?.items?.length - 1].id}`}>
+                        <button type="button" className="w-full p-4 border-t border-b border-r text-base  rounded-r-xl text-gray-600 bg-white hover:bg-gray-100">
+                          <svg width={9} fill="currentColor" height={8} viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M1363 877l-742 742q-19 19-45 19t-45-19l-166-166q-19-19-19-45t19-45l531-531-531-531q-19-19-19-45t19-45l166-166q19-19 45-19t45 19l742 742q19 19 19 45t-19 45z">
+                            </path>
+                          </svg>
+                        </button>
+                      </NextLink>
                     </div>
                   </div>
                 </div>
