@@ -7,13 +7,15 @@ import prisma from "lib/prisma";
 
 export type PaginationWrapper<T> = {
   cursor: string
+  hasNext: boolean
+  hasPrevious: boolean
   take: number
-  items: T[]
+  items: T
 }
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<Link | PaginationWrapper<Link> | string>
+  res: NextApiResponse<Link | PaginationWrapper<Link[]> | string>
 ) {
   const session = await getSession({ req })
 
@@ -40,43 +42,79 @@ export default async function handler(
     }
 
     const { cursor, take } = req.query
-    let links = []
+    const takeNumber = Number(take || 5)
 
     if (cursor) {
-      links = await prisma.link.findMany({
+      if (takeNumber > 0) {
+        const links = await prisma.link.findMany({
+          where: {
+            tenantId: {
+              equals: tenantId
+            }
+          },
+          cursor: {
+            id: String(cursor)
+          },
+          skip: 1,
+          take: takeNumber + 1,
+          orderBy: {
+            id: 'asc'
+          }
+        })
+
+        res.send({
+          cursor: links[links.length - 2].id,
+          hasNext: links.length === takeNumber + 1,
+          hasPrevious: true,
+          take: takeNumber,
+          items: links.slice(0, takeNumber)
+        })
+      } else {
+        // const links = await prisma.link.findMany({
+        //   where: {
+        //     tenantId: {
+        //       equals: tenantId
+        //     }
+        //   },
+        //   cursor: {
+        //     id: String(cursor)
+        //   },
+        //   skip: 1,
+        //   take: takeNumber + 1,
+        //   orderBy: {
+        //     id: 'asc'
+        //   }
+        // })
+
+        // res.send({
+        //   cursor: links[links.length - 2].id,
+        //   hasNext: links.length === takeNumber + 1,
+        //   hasPrevious: true,
+        //   take: takeNumber,
+        //   items: links.slice(0, takeNumber)
+        // })
+      }
+    } else {
+      const links = await prisma.link.findMany({
         where: {
           tenantId: {
             equals: tenantId
           }
         },
-        cursor: {
-          id: String(cursor)
-        },
-        skip: 1,
-        take: Number(take || 10),
+        take: takeNumber + 1,
         orderBy: {
           id: 'asc'
         }
       })
-    } else {
-      links = await prisma.link.findMany({
-        where: {
-          tenantId: {
-            equals: tenantId
-          }
-        },
-        take: Number(take || 10),
-        orderBy: {
-          id: 'asc'
-        }
+
+      res.send({
+        cursor: links[links.length - 2].id,
+        hasNext: links.length === takeNumber + 1,
+        hasPrevious: false,
+        take: takeNumber,
+        items: links.slice(0, takeNumber)
       })
     }
-
-    res.send({
-      cursor: '',
-      take: 5,
-      items: links
-    })
   } else {
     res.send("You must be sign in to view the protected content on this page.")
   }
