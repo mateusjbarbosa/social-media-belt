@@ -2,15 +2,70 @@ import type { NextApiRequest, NextApiResponse } from "next";
 
 import { getSession } from "next-auth/react"
 
-import { Link } from "@prisma/client";
+import { Link, Prisma } from "@prisma/client";
 import prisma from "lib/prisma";
 
 export type PaginationWrapper<T> = {
-  cursor: string
-  hasNext: boolean
-  hasPrevious: boolean
-  take: number
   items: T
+  nextCursor: string
+  prevCursor: string
+}
+
+async function getPaginatedLinks(tenantId: string, cursor: string, take: number): Promise<PaginationWrapper<Link[]>> {
+  const takeNumber: number = Number(take || 5)
+
+  const args: Prisma.LinkFindManyArgs = {
+    where: {
+      tenantId: {
+        equals: tenantId
+      }
+    },
+    take: takeNumber,
+    orderBy: {
+      id: 'asc'
+    }
+  }
+
+  if (cursor) {
+    args.cursor = {
+      id: String(cursor)
+    }
+  }
+
+  const links = await prisma.link.findMany(args)
+  const nextCursor = await prisma.link.findFirst({
+    select: {
+      id: true
+    },
+    where: {
+      id: {
+        gt: links[links.length - 1].id // greater than
+      }
+    },
+    orderBy: {
+      id: 'asc'
+    }
+  })
+  const prevCursor = await prisma.link.findMany({
+    select: {
+      id: true
+    },
+    where: {
+      id: {
+        lt: links[0].id // less than
+      }
+    },
+    take: takeNumber,
+    orderBy: {
+      id: 'desc'
+    }
+  })
+
+  return {
+    items: links,
+    nextCursor: nextCursor?.id || '',
+    prevCursor: prevCursor?.[prevCursor.length - 1].id || ''
+  }
 }
 
 export default async function handler(
@@ -41,80 +96,7 @@ export default async function handler(
       res.send(savedLink)
     }
 
-    const { cursor, take } = req.query
-    const takeNumber = Number(take || 5)
-
-    if (cursor) {
-      if (takeNumber > 0) {
-        const links = await prisma.link.findMany({
-          where: {
-            tenantId: {
-              equals: tenantId
-            }
-          },
-          cursor: {
-            id: String(cursor)
-          },
-          skip: 1,
-          take: takeNumber + 1,
-          orderBy: {
-            id: 'asc'
-          }
-        })
-
-        res.send({
-          cursor: links[links.length - 2].id,
-          hasNext: links.length === takeNumber + 1,
-          hasPrevious: true,
-          take: takeNumber,
-          items: links.slice(0, takeNumber)
-        })
-      } else {
-        // const links = await prisma.link.findMany({
-        //   where: {
-        //     tenantId: {
-        //       equals: tenantId
-        //     }
-        //   },
-        //   cursor: {
-        //     id: String(cursor)
-        //   },
-        //   skip: 1,
-        //   take: takeNumber + 1,
-        //   orderBy: {
-        //     id: 'asc'
-        //   }
-        // })
-
-        // res.send({
-        //   cursor: links[links.length - 2].id,
-        //   hasNext: links.length === takeNumber + 1,
-        //   hasPrevious: true,
-        //   take: takeNumber,
-        //   items: links.slice(0, takeNumber)
-        // })
-      }
-    } else {
-      const links = await prisma.link.findMany({
-        where: {
-          tenantId: {
-            equals: tenantId
-          }
-        },
-        take: takeNumber + 1,
-        orderBy: {
-          id: 'asc'
-        }
-      })
-
-      res.send({
-        cursor: links[links.length - 2].id,
-        hasNext: links.length === takeNumber + 1,
-        hasPrevious: false,
-        take: takeNumber,
-        items: links.slice(0, takeNumber)
-      })
-    }
+    // get paginated links
   } else {
     res.send("You must be sign in to view the protected content on this page.")
   }
