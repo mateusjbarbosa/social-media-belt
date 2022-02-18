@@ -3,74 +3,18 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { getSession } from "next-auth/react"
 
 import { Link, Prisma } from "@prisma/client";
+
 import prisma from "lib/prisma";
 
-export type PaginationWrapper<T> = {
-  items: T
-  nextCursor: string
-  prevCursor: string
-}
+import { findPaginated, LinkPaginationWrapper, saveLink } from 'services/links'
 
-async function getPaginatedLinks(tenantId: string, cursor: string, take: number): Promise<PaginationWrapper<Link[]>> {
-  const takeNumber: number = Number(take || 5)
-
-  const args: Prisma.LinkFindManyArgs = {
-    where: {
-      tenantId: {
-        equals: tenantId
-      }
-    },
-    take: takeNumber,
-    orderBy: {
-      id: 'asc'
-    }
-  }
-
-  if (cursor) {
-    args.cursor = {
-      id: String(cursor)
-    }
-  }
-
-  const links = await prisma.link.findMany(args)
-  const nextCursor = await prisma.link.findFirst({
-    select: {
-      id: true
-    },
-    where: {
-      id: {
-        gt: links[links.length - 1].id // greater than
-      }
-    },
-    orderBy: {
-      id: 'asc'
-    }
-  })
-  const prevCursor = await prisma.link.findMany({
-    select: {
-      id: true
-    },
-    where: {
-      id: {
-        lt: links[0].id // less than
-      }
-    },
-    take: takeNumber,
-    orderBy: {
-      id: 'desc'
-    }
-  })
-
-  return {
-    items: links,
-    nextCursor: nextCursor?.id || '',
-    prevCursor: prevCursor?.[prevCursor.length - 1].id || ''
-  }
+type SessionError = {
+  message: string
 }
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<Link | PaginationWrapper<Link[]> | string>
+  res: NextApiResponse<Link | LinkPaginationWrapper | SessionError>
 ) {
   const session = await getSession({ req })
 
@@ -78,7 +22,17 @@ export default async function handler(
     const tenantId = String(req.query.tenantId)
 
     if (req.method === 'POST') {
-      const data = { ...req.body, tenantId }
+      const data: Prisma.LinkCreateInput = {
+        name: String(req.body.name),
+        publicName: String(req.body.publicName),
+        slug: String(req.body.slug),
+        destination: String(req.body.destination),
+        tenant: {
+          connect: {
+            id: tenantId
+          }
+        }
+      }
 
       const tenants = await prisma.tenant.findMany({
         where: {
@@ -91,13 +45,21 @@ export default async function handler(
         }
       })
 
-      const savedLink = await prisma.link.create({ data })
+      console.log(data)
+
+      const savedLink = await saveLink(data)
+
+      console.log(savedLink)
 
       res.send(savedLink)
     }
 
-    // get paginated links
+    const { cursor, take } = req.query
+
+    const links = await findPaginated(tenantId, cursor, take)
+
+    res.send(links)
   } else {
-    res.send("You must be sign in to view the protected content on this page.")
+    res.send({ message: "You must be sign in to view the protected content on this page." })
   }
 }
