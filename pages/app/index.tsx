@@ -1,19 +1,18 @@
+import { useEffect, useState } from 'react';
+
 import Link from 'next/link'
 import { useRouter } from 'next/router';
 
 import { useSession } from 'next-auth/react'
 
-import useSWR from 'swr'
-
 import { Tenant } from "@prisma/client";
-import { useEffect, useState } from 'react';
 
-const fetcher = (...args) => fetch(...args).then(res => res.json())
+import { useGet } from 'hooks/api';
 
 const App = () => {
   const [shouldRedirect, setShouldRedirect] = useState(false)
   const { data: session } = useSession()
-  const { data, error } = useSWR<Tenant[]>('/api/tenants', fetcher)
+  const { data, error } = useGet<Tenant[]>('/api/tenants')
   const router = useRouter()
 
   useEffect(() => {
